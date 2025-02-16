@@ -1,20 +1,35 @@
 import 'package:expense_tracker/model/expense.dart';
 import 'package:flutter/material.dart';
 
-class NewExpense extends StatefulWidget {
-  const NewExpense({super.key, required this.onAddExpense});
+class EditExpense extends StatefulWidget {
+  const EditExpense({
+    super.key,
+    required this.expense,
+    required this.onUpdateExpense,
+  });
 
-  final void Function(Expense expense) onAddExpense;
+  final Expense expense;
+  final void Function(Expense updatedExpense) onUpdateExpense;
 
   @override
-  State<NewExpense> createState() => _NewExpenseState();
+  State<EditExpense> createState() => _EditExpenseState();
 }
 
-class _NewExpenseState extends State<NewExpense> {
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _amountController = TextEditingController();
-  DateTime _selectedDate = DateTime.now();
-  Category _selectedCategory = Category.leisure;
+class _EditExpenseState extends State<EditExpense> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _amountController;
+  late DateTime _selectedDate;
+  late Category _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.expense.title);
+    _amountController =
+        TextEditingController(text: widget.expense.amount.toString());
+    _selectedDate = widget.expense.date;
+    _selectedCategory = widget.expense.category;
+  }
 
   void _presentDatePicker() async {
     final now = DateTime.now();
@@ -32,10 +47,9 @@ class _NewExpenseState extends State<NewExpense> {
     }
   }
 
-  void _submitExpenseData() {
+  void _submitUpdatedData() {
     final enteredAmount = double.tryParse(_amountController.text);
     final amountIsInvalid = enteredAmount == null || enteredAmount <= 0;
-
     if (_titleController.text.trim().isEmpty || amountIsInvalid) {
       showDialog(
         context: context,
@@ -54,14 +68,15 @@ class _NewExpenseState extends State<NewExpense> {
       return;
     }
 
-    final newExpense = Expense(
+    final updatedExpense = Expense(
+      id: widget.expense.id, // Preserve the same id for updating
       title: _titleController.text,
       amount: enteredAmount,
       date: _selectedDate,
       category: _selectedCategory,
     );
 
-    widget.onAddExpense(newExpense);
+    widget.onUpdateExpense(updatedExpense);
     Navigator.pop(context);
   }
 
@@ -75,6 +90,7 @@ class _NewExpenseState extends State<NewExpense> {
   @override
   Widget build(BuildContext context) {
     return Padding(
+      // Use viewInsets padding to prevent the keyboard from overlapping
       padding: MediaQuery.of(context).viewInsets,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -98,8 +114,7 @@ class _NewExpenseState extends State<NewExpense> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Date: ${_selectedDate.toLocal().toString().split(' ')[0]}',
-                    ),
+                        'Date: ${_selectedDate.toLocal().toString().split(' ')[0]}'),
                   ),
                   IconButton(
                     icon: const Icon(Icons.calendar_month),
@@ -109,12 +124,14 @@ class _NewExpenseState extends State<NewExpense> {
               ),
               DropdownButton<Category>(
                 value: _selectedCategory,
-                items: Category.values.map((cat) {
-                  return DropdownMenuItem(
-                    value: cat,
-                    child: Text(cat.name.toUpperCase()),
-                  );
-                }).toList(),
+                items: Category.values
+                    .map(
+                      (cat) => DropdownMenuItem(
+                        value: cat,
+                        child: Text(cat.name.toUpperCase()),
+                      ),
+                    )
+                    .toList(),
                 onChanged: (value) {
                   if (value != null) {
                     setState(() {
@@ -131,8 +148,8 @@ class _NewExpenseState extends State<NewExpense> {
                     child: const Text('Cancel'),
                   ),
                   ElevatedButton(
-                    onPressed: _submitExpenseData,
-                    child: const Text('Save Expense'),
+                    onPressed: _submitUpdatedData,
+                    child: const Text('Update Expense'),
                   ),
                 ],
               ),
